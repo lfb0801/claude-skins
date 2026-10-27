@@ -583,6 +583,7 @@ async function commit($: EngineInterface, state: DesignState): Promise<void> {
   await update($, prefsAtom, () => state.prefs)
   await $.store.set('custom', state.custom)
   await savePrefs($, state.prefs)
+  $.ui.invalidate('prompt.context')
 }
 
 async function designState($: EngineInterface): Promise<DesignState> {
@@ -1127,21 +1128,19 @@ export const register: Register = (on, options) => {
     return promptRow(look, e.props.text, hasImages ? await next({ ...e, props: { ...e.props, text: '' } }) : undefined)
   })
 
-  if (options.managedCompatibility !== true) {
-    // While charts are drawn, the model learns it can answer a "show me" with a Mermaid
-    // fence. Nothing for a headless run, which draws nothing.
-    on('prompt.compose', async ($, e, next) => {
-      const result = await next(e)
-      const active = await activeSkin($)
-      const isHeadless = e.surfaces.length === 0 || e.traits.includes('bare') || e.traits.includes('print')
+  // The hint belongs to conversation context, not the system prompt. Preserve
+  // every block supplied by the engine and other plugins.
+  on('prompt.context', async ($, e, next) => {
+    const result = await next(e)
+    const active = await activeSkin($)
+    const surfaces = await $.session.surfaces()
 
-      if (active === null || !active.prefs.charts || !active.prefs.hints || isHeadless) {
-        return result
-      }
+    if (active === null || !active.prefs.charts || !active.prefs.hints || surfaces.length === 0) {
+      return result
+    }
 
-      return { sections: [...result.sections, { id: 'skins:charts', text: CHART_HINT, scope: 'session' as const }] }
-    })
-  }
+    return { ...result, blocks: [...result.blocks, { name: 'skins:charts', text: CHART_HINT }] }
+  })
 
   // A reply keeps Claude Code's own drawing unless it holds a card or markdown the pack draws.
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {

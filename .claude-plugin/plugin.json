@@ -10,7 +10,7 @@
     "managedCompatibility": {
       "type": "boolean",
       "title": "Managed security compatibility",
-      "description": "Skip hooks blocked by the built-in managed security guard. Skins still draws charts, but does not add chart hints to the system prompt; session preferences reload on the next UI invalidation.",
+      "description": "Skip classic.SessionStart, which can be blocked by the built-in managed security guard. Session preferences reload on the next UI invalidation.",
       "default": false
     }
   }

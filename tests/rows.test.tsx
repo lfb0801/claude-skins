@@ -997,7 +997,7 @@ test('with charts off, or Mermaid the parser cannot read, the fence keeps its co
   expect(await off.find({ type: 'Svg' })).toBeUndefined()
 })
 
-test('managed compatibility leaves the system prompt unchanged and still draws charts', { options: { managedCompatibility: true } }, async ($, on) => {
+test('managed compatibility still draws charts', { options: { managedCompatibility: true } }, async ($, on) => {
   stubEngine(on)
   on('prompt.compose', () => ({ sections: [{ id: 'base', text: 'You are Claude.', scope: 'shared' as const }] }))
   const result = await $.prompt.compose({ model: 'm', promptModel: 'm', surfaces: ['terminal'], tools: [], outputStyle: null, traits: [] })
@@ -1007,22 +1007,30 @@ test('managed compatibility leaves the system prompt unchanged and still draws c
   await chart.unmount()
 })
 
-test('while charts are on, the system prompt tells Claude it can answer with one', async ($, on) => {
-  stubEngine(on)
-  on('prompt.compose', () => ({ sections: [{ id: 'base', text: 'You are Claude.', scope: 'shared' as const }] }))
-
-  const compose = (traits: readonly string[] = []) =>
-    $.prompt.compose({ model: 'm', promptModel: 'm', surfaces: ['terminal'], tools: [], outputStyle: null, traits: traits as never })
-
-  expect((await compose()).sections.map(section => section.id)).toEqual(['base', 'skins:charts'])
-  expect((await compose(['print'])).sections.map(section => section.id)).toEqual(['base'])
-
-  await runSkin($, 'hints off')
-  expect((await compose()).sections.map(section => section.id)).toEqual(['base'])
-  await runSkin($, 'hints on')
-  await runSkin($, 'charts off')
-  expect((await compose()).sections.map(section => section.id)).toEqual(['base'])
-})
+for (const managedCompatibility of [false, true]) {
+  test(`chart hints use conversation context, managed compatibility ${managedCompatibility}`, { options: { managedCompatibility } }, async ($, on) => {
+    stubEngine(on)
+    let surfaces: ('desktop')[] = ['desktop']
+    on('session.surfaces', () => ({ value: surfaces }))
+    on('prompt.context', () => ({ blocks: [{ name: 'existing', text: 'Keep this context.' }], instructionFiles: [] }))
+    on('prompt.compose', () => ({ sections: [{ id: 'base', text: 'You are Claude.', scope: 'shared' as const }] }))
+    const context = () => $.prompt.context({ blocks: [] })
+    expect((await context()).blocks.map(block => block.name)).toEqual(['existing', 'skins:charts'])
+    const system = await $.prompt.compose({ model: 'm', promptModel: 'm', surfaces: ['desktop'], tools: [], outputStyle: null, traits: [] })
+    expect(system.sections.map(section => section.id)).toEqual(['base'])
+    await runSkin($, 'hints off')
+    expect((await context()).blocks.map(block => block.name)).toEqual(['existing'])
+    await runSkin($, 'hints on')
+    await runSkin($, 'charts off')
+    expect((await context()).blocks.map(block => block.name)).toEqual(['existing'])
+    await runSkin($, 'charts on')
+    surfaces = []
+    expect((await context()).blocks.map(block => block.name)).toEqual(['existing'])
+    surfaces = ['desktop']
+    await runSkin($, 'off')
+    expect((await context()).blocks.map(block => block.name)).toEqual(['existing'])
+  })
+}
 
 const BAND = (surface: (typeof SURFACES)[number], isWorking: boolean) =>
   ({

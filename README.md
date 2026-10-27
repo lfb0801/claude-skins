@@ -113,7 +113,7 @@ it as your own `my-<skin>`. Choices are remembered across sessions.
 ## Managed security compatibility
 
 If Claude Code reports that `cc-plugin-sec-default` skipped skins' `classic.SessionStart`
-and `prompt.compose` hooks, enable **Managed security compatibility** in skins' plugin
+hook, enable **Managed security compatibility** in skins' plugin
 configuration and restart Claude Code. The equivalent user settings entry is:
 
 ```json
@@ -127,8 +127,9 @@ configuration and restart Claude Code. The equivalent user settings entry is:
 ```
 
 Merge this into existing settings; keep other plugin configuration. For `claude --plugin-dir .`,
-use `skins` as the key instead. This omits the two guarded hooks without changing security
-policy. Charts still draw, but skins adds no Mermaid hint to the system prompt. After a
+use `skins` as the key instead. This omits `classic.SessionStart` without changing security
+policy. Chart hints use conversation context rather than the system prompt, in both modes. If policy also blocks
+`prompt.context`, hints cannot be delivered through that hook; charts still draw. After a
 clear, resume or fork, saved preferences reload on the next UI invalidation, with appended
 messages as a second path where permitted by policy. Leave the
 option off when these hooks are allowed, for immediate preference loading on resume.
@@ -188,7 +189,7 @@ Every card has a Copy button (tables also `as text`, the table as drawn; a reply
 drawing changes: the stored conversation and what the model reads are untouched. Agents, plan mode
 and the permission prompt keep Claude Code's own drawing.
 
-**Chart hints.** While charts are on, Claude gets a short model-only note (about 130 tokens, estimated from its 458 characters) saying ` ```mermaid ` fences draw here, so it reaches for a chart when one reads better. Never for headless `claude -p` runs. `/skin hints off` drops it and keeps charts drawing.
+**Chart hints.** While charts are on, Claude gets a short conversation context note (about 130 tokens, estimated from its 458 characters) saying ` ```mermaid ` fences draw here, so it reaches for a chart when one reads better. The hint uses `prompt.context`, not the system prompt. Never for headless `claude -p` runs. `/skin hints off` drops it and keeps charts drawing.
 
 **Light and dark.** Every skin has both and follows Claude Code's theme. On `auto` it follows your
 terminal (`COLORFGBG`) or the system. Force one with `SKINS_THEME=light` or `SKINS_THEME=dark`.
