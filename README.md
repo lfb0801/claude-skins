@@ -129,7 +129,8 @@ configuration and restart Claude Code. The equivalent user settings entry is:
 Merge this into existing settings; keep other plugin configuration. For `claude --plugin-dir .`,
 use `skins` as the key instead. This omits the two guarded hooks without changing security
 policy. Charts still draw, but skins adds no Mermaid hint to the system prompt. After a
-clear, resume or fork, saved preferences reload on the next appended message. Leave the
+clear, resume or fork, saved preferences reload on the next UI invalidation, with appended
+messages as a second path where permitted by policy. Leave the
 option off when these hooks are allowed, for immediate preference loading on resume.
 
 ## Preview

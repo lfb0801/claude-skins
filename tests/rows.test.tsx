@@ -1315,8 +1315,7 @@ test('/skin pin keeps a look to this folder, /skin unpin returns to the default'
   expect((store.prefs as { skin: string }).skin).toBe('dracula')
 })
 
-// On a Team or Enterprise plan the built-in guard holds classic.SessionStart back from
-// user-tier mods, so /clear reaches skins only as the new session's first appended row.
+// Appended rows remain a second reload path where session.append is permitted.
 test('the first row of a new session loads the saved prefs again, without classic.SessionStart', { options: { managedCompatibility: true } }, async ($, on) => {
   const store: Record<string, unknown> = {}
   let session = 's1'
@@ -1350,6 +1349,35 @@ test('the first row of a new session loads the saved prefs again, without classi
 
   session = 's2'
   await $.session.append(note)
+  expect(await colorNow('b3')).not.toBe(before)
+})
+
+test('UI invalidation reloads saved prefs without SessionStart or session.append', { options: { managedCompatibility: true }, plugins: [COUNTDOWN] }, async ($, on) => {
+  const store: Record<string, unknown> = {}
+  let session = 's1'
+  const clock = stubEngine(on, { store: true })
+  on('store.get', ($, e) => ({ value: store[e.key] }))
+  on('store.set', ($, e) => {
+    store[e.key] = e.value
+    return { value: undefined }
+  })
+  on('session.id', () => ({ value: session }))
+  on('session.start', () => ({ cwd: '/work' }))
+  on('command.register', () => ({ value: { command: 'skin' } }))
+  on('tool.register', () => ({ value: { tool: 'mcp__skins__design' } }))
+  on('config.list', () => ({ value: [] }))
+  await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+  const colorNow = async (id: string) =>
+    spanColor((await (await $.ui.mount(toolUse(call('Bash', { command: 'ls' }, { tool_use_id: id })))).find({ type: 'Text', text: /Bash/ })) as Found, 'Bash')
+  const before = await colorNow('b1')
+
+  // Saved by another session: the same session's rows leave the loaded prefs alone.
+  store.prefs = { skin: 'dracula' }
+  await clock.advance(1000)
+  expect(await colorNow('b2')).toBe(before)
+
+  session = 's2'
+  await clock.advance(1000)
   expect(await colorNow('b3')).not.toBe(before)
 })
 

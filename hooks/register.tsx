@@ -403,9 +403,9 @@ async function load($: EngineInterface): Promise<void> {
 
 // The session the prefs were last loaded for. /clear, /resume and /branch reset $.state to its
 // defaults and skip session.start, and on a Team or Enterprise plan the built-in guard
-// (cc-plugin-sec-default) keeps classic.SessionStart from user-tier mods: the new session's first
-// appended rows catch the change instead. No await between the check and the write, so a burst of
-// appends loads once.
+// (cc-plugin-sec-default) can block classic.SessionStart and session.append: the new session's
+// UI invalidations catch the change instead, with appended rows as a second path.
+// No await between the check and the write, so a burst of events loads once.
 let loadedFor: string | undefined
 
 // Undefined where nothing answers for the session's id (a test's engine): then there is nothing to compare.
@@ -439,7 +439,7 @@ async function reloadIfNewSession($: EngineInterface, known?: string): Promise<v
   loadedFor = id
 
   // A resumed scheduled-task session can start before Claude Code has bound it (#64). Not
-  // loaded yet, then: the next append tries again.
+  // loaded yet, then: the next invalidation or append tries again.
   try {
     await load($)
   } catch (error) {
@@ -702,6 +702,7 @@ export const register: Register = (on, options) => {
   }
 
   on('ui.invalidate', async ($, e, next) => {
+    await reloadIfNewSession($)
     await retryTheme($)
 
     if (e.event === 'ui.render' && !(await settleEntrances($, true)) && refusals <= FAST_RETRIES) {
