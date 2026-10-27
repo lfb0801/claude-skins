@@ -5,5 +5,13 @@
   "author": { "name": "hellosverre", "url": "https://github.com/hellosverre" },
   "license": "MIT",
   "keywords": ["claude-code-mods", "claude-mods", "function-hooks", "theme", "skin"],
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "managedCompatibility": {
+      "type": "boolean",
+      "title": "Managed security compatibility",
+      "description": "Skip hooks blocked by the built-in managed security guard. Skins still draws charts, but does not add chart hints to the system prompt; session preferences reload on the next appended message.",
+      "default": false
+    }
+  }
 }

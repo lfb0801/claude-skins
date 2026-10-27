@@ -997,6 +997,16 @@ test('with charts off, or Mermaid the parser cannot read, the fence keeps its co
   expect(await off.find({ type: 'Svg' })).toBeUndefined()
 })
 
+test('managed compatibility leaves the system prompt unchanged and still draws charts', { options: { managedCompatibility: true } }, async ($, on) => {
+  stubEngine(on)
+  on('prompt.compose', () => ({ sections: [{ id: 'base', text: 'You are Claude.', scope: 'shared' as const }] }))
+  const result = await $.prompt.compose({ model: 'm', promptModel: 'm', surfaces: ['terminal'], tools: [], outputStyle: null, traits: [] })
+  expect(result.sections.map(section => section.id)).toEqual(['base'])
+  const chart = await $.ui.mount(chartReply('desktop'))
+  expect(await chart.find({ type: 'Svg' })).toBeDefined()
+  await chart.unmount()
+})
+
 test('while charts are on, the system prompt tells Claude it can answer with one', async ($, on) => {
   stubEngine(on)
   on('prompt.compose', () => ({ sections: [{ id: 'base', text: 'You are Claude.', scope: 'shared' as const }] }))
@@ -1307,7 +1317,7 @@ test('/skin pin keeps a look to this folder, /skin unpin returns to the default'
 
 // On a Team or Enterprise plan the built-in guard holds classic.SessionStart back from
 // user-tier mods, so /clear reaches skins only as the new session's first appended row.
-test('the first row of a new session loads the saved prefs again, without classic.SessionStart', async ($, on) => {
+test('the first row of a new session loads the saved prefs again, without classic.SessionStart', { options: { managedCompatibility: true } }, async ($, on) => {
   const store: Record<string, unknown> = {}
   let session = 's1'
   stubEngine(on, { store: true })

@@ -613,7 +613,7 @@ async function drawMarkdown($: EngineInterface, args: SkinsMarkdownArgs): Promis
   return replyRows({ ...lookOf(ui, active, args.surface), links, isFirstDraw: () => false }, segments, Math.max(20, Math.floor(args.columns)), svg)
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
   // Adds `$.skins` for other mods. A call is the `skins.markdown` event, which the hook
   // below answers with this session's `$`; the method itself is the chain's floor.
   on('engine.create', async ($, e, next) => {
@@ -692,12 +692,14 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // Where the guard does not hold it back, this comes first; session.append then finds the session loaded.
-  on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
-    await reloadIfNewSession($, typeof e.session_id === 'string' && e.session_id !== '' ? e.session_id : undefined)
+  if (options.managedCompatibility !== true) {
+    // Where the guard does not hold it back, this comes first; session.append then finds the session loaded.
+    on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
+      await reloadIfNewSession($, typeof e.session_id === 'string' && e.session_id !== '' ? e.session_id : undefined)
 
-    return next(e)
-  })
+      return next(e)
+    })
+  }
 
   on('ui.invalidate', async ($, e, next) => {
     await retryTheme($)
@@ -1124,19 +1126,21 @@ export const register: Register = on => {
     return promptRow(look, e.props.text, hasImages ? await next({ ...e, props: { ...e.props, text: '' } }) : undefined)
   })
 
-  // While charts are drawn, the model learns it can answer a "show me" with a Mermaid
-  // fence. Nothing for a headless run, which draws nothing.
-  on('prompt.compose', async ($, e, next) => {
-    const result = await next(e)
-    const active = await activeSkin($)
-    const isHeadless = e.surfaces.length === 0 || e.traits.includes('bare') || e.traits.includes('print')
+  if (options.managedCompatibility !== true) {
+    // While charts are drawn, the model learns it can answer a "show me" with a Mermaid
+    // fence. Nothing for a headless run, which draws nothing.
+    on('prompt.compose', async ($, e, next) => {
+      const result = await next(e)
+      const active = await activeSkin($)
+      const isHeadless = e.surfaces.length === 0 || e.traits.includes('bare') || e.traits.includes('print')
 
-    if (active === null || !active.prefs.charts || !active.prefs.hints || isHeadless) {
-      return result
-    }
+      if (active === null || !active.prefs.charts || !active.prefs.hints || isHeadless) {
+        return result
+      }
 
-    return { sections: [...result.sections, { id: 'skins:charts', text: CHART_HINT, scope: 'session' as const }] }
-  })
+      return { sections: [...result.sections, { id: 'skins:charts', text: CHART_HINT, scope: 'session' as const }] }
+    })
+  }
 
   // A reply keeps Claude Code's own drawing unless it holds a card or markdown the pack draws.
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {

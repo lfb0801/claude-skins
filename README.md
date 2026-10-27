@@ -110,6 +110,28 @@ Built-in skins: `noir`, `tokyo-night`, `dracula`, `catppuccin`, `rose-pine`, `no
 `design` tool, so it builds the skin and applies it while you watch. Repainting a built-in skin saves
 it as your own `my-<skin>`. Choices are remembered across sessions.
 
+## Managed security compatibility
+
+If Claude Code reports that `cc-plugin-sec-default` skipped skins' `classic.SessionStart`
+and `prompt.compose` hooks, enable **Managed security compatibility** in skins' plugin
+configuration and restart Claude Code. The equivalent user settings entry is:
+
+```json
+{
+  "pluginConfigs": {
+    "skins@hellosverre-mods": {
+      "options": { "managedCompatibility": true }
+    }
+  }
+}
+```
+
+Merge this into existing settings; keep other plugin configuration. For `claude --plugin-dir .`,
+use `skins` as the key instead. This omits the two guarded hooks without changing security
+policy. Charts still draw, but skins adds no Mermaid hint to the system prompt. After a
+clear, resume or fork, saved preferences reload on the next appended message. Leave the
+option off when these hooks are allowed, for immediate preference loading on resume.
+
 ## Preview
 
 Drawn by the mod's own card code (`scripts/previews.ts`), not screenshots.
